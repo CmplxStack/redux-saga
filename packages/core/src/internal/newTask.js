@@ -43,7 +43,7 @@ export default function newTask(env, mainTask, parentContext, parentEffectId, me
     }
   }
 
-  function end(result, isErr) {
+  function end(result, isErr, runtimeInfo = isErr ? {} : undefined) {
     if (!isErr) {
       // The status here may be RUNNING or CANCELLED
       // If the status is CANCELLED, then we do not need to change it here
@@ -54,23 +54,24 @@ export default function newTask(env, mainTask, parentContext, parentEffectId, me
       deferredEnd && deferredEnd.resolve(result)
     } else {
       status = ABORTED
-      addSagaStack(result, {
+      addSagaStack(runtimeInfo, {
         meta,
-        effect: task.crashedEffect,
+        // should we consider only the very first effect?
+        // effect: task.crashedEffect,
         cancelledTasks: cancelledDueToErrorTasks,
       })
 
       if (task.isRoot) {
-        if (result && result.sagaStack) {
-          result.sagaStack = sagaStackToString(result.sagaStack)
+        if (runtimeInfo.sagaStack) {
+          runtimeInfo.sagaStack = sagaStackToString(runtimeInfo.sagaStack, runtimeInfo.effect)
         }
 
-        env.onError(result)
+        env.onError(result, runtimeInfo)
       }
       taskError = result
       deferredEnd && deferredEnd.reject(result)
     }
-    task.cont(result, isErr)
+    task.cont(result, isErr, runtimeInfo)
     task.joiners.forEach(j => j.cb(result, isErr))
     task.joiners = null
   }

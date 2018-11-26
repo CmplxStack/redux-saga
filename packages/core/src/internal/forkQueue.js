@@ -24,15 +24,15 @@ export default function forkQueue(mainTask, onAbort, cont) {
   const getTasks = () => tasks
   const getTaskNames = () => tasks.map(t => t.meta.name)
 
-  function abort(err) {
+  function abort(err, runtimeInfo) {
     onAbort()
     cancelAll()
-    cont(err, true)
+    cont(err, true, runtimeInfo)
   }
 
   function addTask(task) {
     tasks.push(task)
-    task.cont = (res, isErr) => {
+    task.cont = (res, isErr, runtimeInfo) => {
       if (completed) {
         return
       }
@@ -40,7 +40,7 @@ export default function forkQueue(mainTask, onAbort, cont) {
       remove(tasks, task)
       task.cont = noop
       if (isErr) {
-        abort(res)
+        abort(res, runtimeInfo)
       } else {
         if (task === mainTask) {
           result = res

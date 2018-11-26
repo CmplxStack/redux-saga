@@ -62,7 +62,7 @@ export default function proc(env, iterator, parentContext, parentEffectId, meta,
     It's a recursive async/continuation function which calls itself
     until the generator terminates or throws
   **/
-  function next(arg, isErr) {
+  function next(arg, isErr, crashedEffect) {
     try {
       let result
       if (isErr) {
@@ -108,7 +108,7 @@ export default function proc(env, iterator, parentContext, parentEffectId, meta,
         throw error
       }
       mainTask.status = ABORTED
-      mainTask.cont(error, true)
+      mainTask.cont(error, true, { effect: crashedEffect })
     }
   }
 
@@ -168,10 +168,12 @@ export default function proc(env, iterator, parentContext, parentEffectId, meta,
           env.sagaMonitor.effectResolved(effectId, res)
         }
       }
-      if (isErr) {
-        task.crashedEffect = effect
-      }
-      cb(res, isErr)
+      // if (isErr) {
+      //   task.crashedEffect = effect
+      //   debugger;
+      // }
+      // TODO can we reach effect in next during digestEffect?
+      cb(res, isErr, effect)
     }
     // tracks down the current cancel
     currCb.cancel = noop
